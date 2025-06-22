@@ -190,7 +190,8 @@ model Product {
   category      String
   regularPrice  Decimal
   discountPrice Decimal?
-  imageUrl      String
+  image      String
+  games_name      String
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
   deleted_at    DateTime?

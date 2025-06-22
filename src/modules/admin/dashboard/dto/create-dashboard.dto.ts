@@ -12,6 +12,9 @@ export class CreateDashboardDto {
 
   @IsString()
   category: string;
+  
+  @IsString()
+  games_name: string;
 
   @Type(() => Number)
   @IsNumber({}, { message: 'Regular price must be a number' })

@@ -14,8 +14,8 @@ export class DashboardService {
 
   async create(createDashboardDto: CreateDashboardDto & { image?: Express.Multer.File }) {
     try {
-      const imageUrl = createDashboardDto.image 
-        ? `${appConfig().storageUrl.rootUrlPublic}${appConfig().storageUrl.product}${createDashboardDto.image.filename}`
+      const image = createDashboardDto.image 
+        ? `${createDashboardDto.image.filename}`
         : null;
 
       const product = await this.prisma.product.create({
@@ -25,7 +25,8 @@ export class DashboardService {
           category: createDashboardDto.category,
           regularPrice: createDashboardDto.regularPrice,
           discountPrice: createDashboardDto.discountPrice,
-          imageUrl,
+          games_name: createDashboardDto.games_name,
+          image,
         },
       });
       return {
@@ -51,7 +52,15 @@ export class DashboardService {
         }
       });
 
-      return products;
+      // Map products and construct image URLs
+      const mappedProducts = products.map(product => ({
+        ...product,
+        imageUrl: product.image 
+          ? `${appConfig().app.url}/storage/product/${product.image}`
+          : null
+      }));
+
+      return mappedProducts;
     } catch (error) {
       throw new BadRequestException(
         error?.message || 'Failed to fetch products'
@@ -72,7 +81,12 @@ export class DashboardService {
         throw new NotFoundException('Product not found');
       }
 
-      return product;
+      return {
+        ...product,
+        imageUrl: product.image 
+          ? `${appConfig().app.url}/storage/product/${product.image}`
+          : null
+      };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
