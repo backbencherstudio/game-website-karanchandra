@@ -218,3 +218,14 @@ model Payment {
 
   @@map("payments")
 }
+
+model EmailSubscription {
+  id         String    @id @default(cuid())
+  email      String    @unique
+  status     String    @default("active")
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@map("email_subscriptions")
+}

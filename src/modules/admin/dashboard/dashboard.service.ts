@@ -168,4 +168,48 @@ export class DashboardService {
       );
     }
   }
+
+  async getSuccessfulPayments({
+    page = 1,
+    limit = 10,
+  }: {
+    page: number;
+    limit: number;
+  }) {
+    try {
+      const skip = (page - 1) * limit;
+
+      const [total, payments] = await Promise.all([
+        this.prisma.payment.count({
+          where: {
+            status: 'completed',
+            deleted_at: null
+          }
+        }),
+        this.prisma.payment.findMany({
+          where: {
+            status: 'completed',
+            deleted_at: null
+          },
+          skip,
+          take: limit,
+          orderBy: { created_at: 'desc' }
+        })
+      ]);
+
+      return {
+        payments,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      };
+    } catch (error) {
+      throw new BadRequestException(
+        error?.message || 'Failed to fetch successful payments'
+      );
+    }
+  }
 }

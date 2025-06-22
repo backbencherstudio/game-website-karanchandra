@@ -11,6 +11,7 @@ import {
   BadRequestException,
   ValidationPipe,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -160,6 +161,28 @@ export class DashboardController {
       };
     } catch (error) {
       throw new BadRequestException(error?.message || 'Failed to update product');
+    }
+  }
+
+  @Get('/successful-payments-details')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async getSuccessfulPayments(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    try {
+      const payments = await this.dashboardService.getSuccessfulPayments({
+        page: Number(page),
+        limit: Number(limit),
+      });
+      return {
+        success: true,
+        data: payments,
+        message: 'Successful payments fetched successfully'
+      };
+    } catch (error) {
+      throw new BadRequestException(error?.message || 'Failed to fetch successful payments');
     }
   }
 }
