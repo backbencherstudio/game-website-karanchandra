@@ -3,12 +3,15 @@ import { CreateUpiPaymentDto, PaymentStatus } from './dto/create-upi-payment.dto
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
+import * as qs from 'querystring';
 
 @Injectable()
 export class UpiPaymentService {
   private readonly ezUpiApiKey: string;
   private readonly ezUpiApiUrl: string;
   private readonly callbackUrl: string;
+  private readonly successRedirectUrl: string;
+  private readonly failureRedirectUrl: string;
 
   constructor(
     private prisma: PrismaService,
@@ -17,6 +20,8 @@ export class UpiPaymentService {
     this.ezUpiApiKey = this.configService.get('EZ_UPI_API_KEY');
     this.ezUpiApiUrl = this.configService.get('EZ_UPI_API_URL') || 'https://ezupi.com/api';
     this.callbackUrl = this.configService.get('CALLBACK_URL');
+    this.successRedirectUrl = this.configService.get('SUCCESS_REDIRECT_URL') || 'http://localhost:3000/success';
+    this.failureRedirectUrl = this.configService.get('FAILURE_REDIRECT_URL') || 'http://localhost:3000/failure';
 
     if (!this.ezUpiApiKey) {
       throw new Error('EZ_UPI_API_KEY is not configured');
@@ -24,46 +29,40 @@ export class UpiPaymentService {
   }
 
   // Method to create a one-time payment
-  async create(createUpiPaymentDto: CreateUpiPaymentDto) {
+  async create(createUpiPaymentDto: any) {
     try {
-      const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      const response = await axios.post(
-        `${this.ezUpiApiUrl}`,
-        {
-          amount: createUpiPaymentDto.amount,
-          currency: 'INR',
-          transaction_id: transactionId,
-          description: createUpiPaymentDto.description,
-          callback_url: this.callbackUrl,
-          customer: {
-            name: createUpiPaymentDto.name,
-            email: createUpiPaymentDto.email,
-            phone: createUpiPaymentDto.phone,
-            address: createUpiPaymentDto.address,
-          }
+      const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const payload = qs.stringify({
+        customer_name: createUpiPaymentDto.name,
+        customer_mobile: createUpiPaymentDto.phone,
+        user_token: this.ezUpiApiKey, // From env
+        amount: String(createUpiPaymentDto.amount),
+        order_id: transactionId,
+        redirect_url: this.successRedirectUrl,
+        redirect_url2: this.failureRedirectUrl,
+        remark1: createUpiPaymentDto.description || 'Payment from form',
+        remark2: createUpiPaymentDto.notes || 'UPI Notes',
+      });
+      
+      const response = await axios.post(`${this.ezUpiApiUrl}`, payload, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.ezUpiApiKey}`,
-            'Content-Type': 'application/json',
-          }
-        }
-      );
-
-      if (!response.data || !response.data.status) {
-        throw new BadRequestException(response.data?.message || 'Failed to create payment');
+      });
+      if (!response.data || response.data.status === false) {
+        throw new BadRequestException(response.data?.message || 'EZ-UPI Error');
       }
 
       const { orderId, payment_url } = response.data.result;
+    
 
-      // Save the payment details to the database
+      // Save to DB
       const payment = await this.prisma.payment.create({
         data: {
-          order_id: orderId,
+          order_id: orderId || transactionId, // Use orderId from response or transactionId as fallback
           amount: createUpiPaymentDto.amount,
           currency: 'INR',
-          status: PaymentStatus.PENDING,
+          status: 'PENDING',
           customer_name: createUpiPaymentDto.name,
           customer_email: createUpiPaymentDto.email,
           customer_phone: createUpiPaymentDto.phone,
@@ -77,18 +76,15 @@ export class UpiPaymentService {
         success: true,
         data: {
           payment_url: payment_url,
-          transaction_id: transactionId,
-          amount: createUpiPaymentDto.amount,
-          currency: 'INR',
+          transaction_id: orderId,
           payment_id: payment.id,
-          callback_url: this.callbackUrl
         },
         message: 'UPI payment initiated successfully',
       };
     } catch (error) {
       console.error('EZ-UPI Error:', error);
       throw new BadRequestException(
-        error.response?.data?.message || error.message || 'Failed to create payment'
+        error?.response?.data?.message || error.message || 'UPI Payment failed',
       );
     }
   }
@@ -136,48 +132,66 @@ export class UpiPaymentService {
   async getPaymentStatus(transactionId: string) {
     try {
       const payment = await this.prisma.payment.findFirst({
-        where: { order_id: transactionId }
+        where: { order_id: transactionId },
       });
 
+      console.log('EZ-UPI Status Response:', payment);
       if (!payment) {
         throw new BadRequestException('Payment not found');
       }
 
-      const response = await axios.get(
-        `${this.ezUpiApiUrl}/check-order-status`,
+      // Proper form-encoded POST request
+      const response = await axios.post(
+        'https://ezupi.com/api/check-order-status',
+        qs.stringify({
+          user_token: this.ezUpiApiKey,
+          order_id: transactionId,
+        }),
         {
-          params: {
-            user_token: this.ezUpiApiKey,
-            order_id: transactionId,
-          },
           headers: {
-            'Authorization': `Bearer ${this.ezUpiApiKey}`,
-          }
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
         }
       );
 
-      const { status } = response.data.result;
+      console.log('EZ-UPI Status Response:', response.data);
 
-      if (status === 'SUCCESS' && payment.status !== PaymentStatus.COMPLETED) {
+      const { status, result, message } = response.data;
+
+      if (!status || !result) {
+        throw new BadRequestException('Invalid response from EZ-UPI');
+      }
+
+      const txnStatus = result.txnStatus;
+
+      // Update DB only if success
+      if (txnStatus === 'SUCCESS' && payment.status !== PaymentStatus.COMPLETED) {
         await this.prisma.payment.update({
           where: { id: payment.id },
-          data: { status: PaymentStatus.COMPLETED }
+          data: {
+            status: PaymentStatus.COMPLETED,
+            utr: result.utr || undefined, // Optional: Save UTR
+          },
         });
       }
 
       return {
         success: true,
         data: {
-          status: status === 'SUCCESS' ? PaymentStatus.COMPLETED : payment.status,
+          status: txnStatus === 'SUCCESS' ? PaymentStatus.COMPLETED : PaymentStatus.PENDING,
+          utr: result.utr || null,
           amount: payment.amount,
           currency: payment.currency,
-          created_at: payment.created_at
+          created_at: payment.created_at,
         },
-        message: status === 'SUCCESS' ? 'Payment completed' : 'Payment pending'
+        message: txnStatus === 'SUCCESS' ? 'Payment completed' : 'Payment pending',
       };
     } catch (error) {
+      console.error('Check Payment Status Error:', error);
       throw new BadRequestException(
-        error.response?.data?.message || error.message || 'Failed to fetch payment status'
+        error?.response?.data?.message ||
+          error?.message ||
+          'Failed to check payment status'
       );
     }
   }

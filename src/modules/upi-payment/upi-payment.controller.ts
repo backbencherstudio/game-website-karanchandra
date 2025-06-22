@@ -1,10 +1,11 @@
-import { Controller, Post, Body, Get, Param, Query, HttpException, HttpStatus, BadRequestException, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Query, HttpException, HttpStatus, BadRequestException, UseGuards, UseInterceptors } from '@nestjs/common';
 import { UpiPaymentService } from './upi-payment.service';
 import { CreateUpiPaymentDto } from './dto/create-upi-payment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guard/role/roles.guard';
 import { Role } from 'src/common/guard/role/role.enum';
 import { Roles } from 'src/common/guard/role/roles.decorator';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('upi-payment')
 export class UpiPaymentController {
@@ -12,13 +13,49 @@ export class UpiPaymentController {
 
   // Endpoint to create a one-time payment
   @Post()
-  async create(@Body() createUpiPaymentDto: CreateUpiPaymentDto) {
+  @UseInterceptors(AnyFilesInterceptor())
+  async create(@Body() body: any) {
     try {
-      return await this.upiPaymentService.create(createUpiPaymentDto);
+      
+      // Validate required fields
+      if (!body.name || typeof body.name !== 'string') {
+        throw new BadRequestException('name must be a string');
+      }
+      
+      if (!body.email || !body.email.includes('@')) {
+        throw new BadRequestException('email must be a valid email');
+      }
+      
+      if (!body.phone || typeof body.phone !== 'string') {
+        throw new BadRequestException('phone must be a string');
+      }
+      
+      if (!body.address || typeof body.address !== 'string') {
+        throw new BadRequestException('address must be a string');
+      }
+      
+      // Convert and validate amount
+      const amount = Number(body.amount);
+      if (isNaN(amount) || amount <= 0) {
+        throw new BadRequestException('amount must be a positive number');
+      }
+      
+      // Create the payment data object
+      const paymentData = {
+        name: body.name,
+        email: body.email,
+        phone: body.phone,
+        address: body.address,
+        amount: amount,
+        description: body.description || 'Payment via form submission',
+        notes: body.notes || 'Payment initiated from form endpoint'
+      };
+      return await this.upiPaymentService.create(paymentData);
     } catch (error) {
+      console.error('Payment creation error:', error);
       throw new HttpException(
         error?.message || 'Failed to create UPI payment',
-        error?.status || HttpStatus.BAD_REQUEST
+        error?.status || HttpStatus.BAD_REQUEST,
       );
     }
   }

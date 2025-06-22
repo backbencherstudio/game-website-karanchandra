@@ -1,5 +1,5 @@
-import { IsString, IsNumber, IsEmail, IsOptional, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsNumber, IsEmail, IsOptional, IsEnum, IsNotEmpty } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
 export enum PaymentStatus {
   PENDING = 'pending',
@@ -8,28 +8,39 @@ export enum PaymentStatus {
 }
 
 export class CreateUpiPaymentDto {
-  @IsString()
+  @IsString({ message: 'name must be a string' })
+  @IsNotEmpty({ message: 'name is required' })
   name: string;
 
-  @IsEmail()
+  @IsEmail({}, { message: 'email must be a valid email' })
+  @IsNotEmpty({ message: 'email is required' })
   email: string;
 
-  @IsString()
+  @IsString({ message: 'phone must be a string' })
+  @IsNotEmpty({ message: 'phone is required' })
   phone: string;
 
-  @IsString()
+  @IsString({ message: 'address must be a string' })
+  @IsNotEmpty({ message: 'address is required' })
   address: string;
 
   @Type(() => Number)
-  @IsNumber()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      const num = parseFloat(value);
+      return isNaN(num) ? value : num;
+    }
+    return value;
+  })
+  @IsNumber({}, { message: 'amount must be a number' })
   amount: number;
 
-  @IsString()
+  @IsString({ message: 'description must be a string' })
   @IsOptional()
-  description: string;
+  description?: string;
 
+  @IsString({ message: 'notes must be a string' })
   @IsOptional()
-  @IsString()
   notes?: string;
 
   @IsEnum(PaymentStatus)
