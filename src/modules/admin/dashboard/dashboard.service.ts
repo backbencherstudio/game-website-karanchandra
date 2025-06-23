@@ -147,9 +147,9 @@ export class DashboardService {
       // Prepare update data
       const updateData: any = { ...updateDashboardDto };
 
-      // If new image is uploaded, update the imageUrl
+      // If new image is uploaded, update the image field
       if (image) {
-        updateData.imageUrl = `${appConfig().app.url}${appConfig().storageUrl.rootUrlPublic}${appConfig().storageUrl.product}${image.filename}`;
+        updateData.image = image.filename;
       }
 
       // Update the product
