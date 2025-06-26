@@ -195,6 +195,7 @@ model Product {
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
   deleted_at    DateTime?
+  paymentItems  PaymentItem[]
 
   @@map("products")
 }
@@ -216,7 +217,23 @@ model Payment {
   updated_at      DateTime  @updatedAt
   deleted_at      DateTime?
 
+  items           PaymentItem[]
+
   @@map("payments")
+}
+
+model PaymentItem {
+  id         String   @id @default(cuid())
+  payment    Payment  @relation(fields: [paymentId], references: [id])
+  paymentId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  productId  String
+  quantity   Int
+  price      Decimal
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("payment_items")
 }
 
 model EmailSubscription {

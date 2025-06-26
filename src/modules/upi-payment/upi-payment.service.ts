@@ -54,12 +54,12 @@ export class UpiPaymentService {
       }
 
       const { orderId, payment_url } = response.data.result;
-    
+      
 
       // Save to DB
       const payment = await this.prisma.payment.create({
         data: {
-          order_id: orderId || transactionId, // Use orderId from response or transactionId as fallback
+          order_id: orderId || transactionId,
           amount: createUpiPaymentDto.amount,
           currency: 'INR',
           status: 'PENDING',
@@ -69,6 +69,15 @@ export class UpiPaymentService {
           customer_address: createUpiPaymentDto.address,
           description: createUpiPaymentDto.description,
           notes: createUpiPaymentDto.notes,
+          items: {
+            create: createUpiPaymentDto.items.map(item => ({
+              product: { connect: { id: item.productId } },
+              quantity: item.quantity,
+            })),
+          },
+        },
+        include: {
+          items: true,
         },
       });
 
@@ -229,7 +238,14 @@ export class UpiPaymentService {
           where,
           skip,
           take: limit,
-          orderBy: { created_at: 'desc' }
+          orderBy: { created_at: 'desc' },
+          include: {
+            items: {
+              include: {
+                product: true,
+              },
+            },
+          },
         })
       ]);
 

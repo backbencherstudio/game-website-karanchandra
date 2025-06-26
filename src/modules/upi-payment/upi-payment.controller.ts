@@ -39,6 +39,41 @@ export class UpiPaymentController {
       if (isNaN(amount) || amount <= 0) {
         throw new BadRequestException('amount must be a positive number');
       }
+      console.log(body)
+      // Manually parse items as an array of objects
+      const items = [];
+      for (let i = 0; body[`items[${i}].productId`]; i++) {
+        // Find the key that matches, ignoring whitespace
+        const quantityKey = Object.keys(body).find(
+          k => k.replace(/\s/g, '') === `items[${i}].quantity`
+        );
+        const quantityRaw = quantityKey ? body[quantityKey] : undefined;
+        console.log(`Index ${i}:`, quantityRaw);
+
+        const quantity = quantityRaw !== undefined && quantityRaw !== '' ? parseInt(quantityRaw, 10) : null;
+        if (quantity === null || isNaN(quantity) || quantity <= 0) {
+          throw new BadRequestException('Each item must have a valid quantity');
+        }
+        items.push({
+          productId: body[`items[${i}].productId`],
+          quantity,
+        });
+      }
+
+      if (items.length === 0) {
+        throw new BadRequestException('items must be a non-empty array');
+      }
+
+      // Validate each item
+      for (const item of items) {
+        if (!item.productId || typeof item.productId !== 'string') {
+          throw new BadRequestException('Each item must have a valid productId');
+        }
+        if (typeof item.quantity !== 'number' || item.quantity <= 0) {
+          throw new BadRequestException('Each item must have a valid quantity');
+        }
+      }
+
       
       // Create the payment data object
       const paymentData = {
@@ -47,6 +82,7 @@ export class UpiPaymentController {
         phone: body.phone,
         address: body.address,
         amount: amount,
+        items: items,
         description: body.description || 'Payment via form submission',
         notes: body.notes || 'Payment initiated from form endpoint'
       };
