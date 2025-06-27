@@ -231,4 +231,12 @@ export class UpiPaymentService {
       throw new BadRequestException(error.message || 'Failed to fetch payments');
     }
   }
+
+  async updateOrderDelivery(orderId: string) {
+    const updated = await this.prisma.payment.update({
+      where: { order_id: orderId },
+      data: { order_delivery: 'Completed' },
+    });
+    return updated;
+  }
 }

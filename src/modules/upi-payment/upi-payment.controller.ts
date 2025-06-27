@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Query, HttpException, HttpStatus, BadRequestException, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Query, HttpException, HttpStatus, BadRequestException, UseGuards, UseInterceptors, Patch } from '@nestjs/common';
 import { UpiPaymentService } from './upi-payment.service';
 import { CreateUpiPaymentDto } from './dto/create-upi-payment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -122,6 +122,23 @@ export class UpiPaymentController {
       throw new HttpException(
         error?.message || 'Failed to fetch payments',
         error?.status || HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  @Patch('order-delivery/:orderId')
+  async updateOrderDelivery(@Param('orderId') orderId: string) {
+    try {
+      const updated = await this.upiPaymentService.updateOrderDelivery(orderId);
+      return {
+        success: true,
+        data: updated,
+        message: 'Order delivery status updated to Completed',
+      };
+    } catch (error) {
+      throw new HttpException(
+        error?.message || 'Failed to update order delivery',
+        error?.status || HttpStatus.BAD_REQUEST,
       );
     }
   }

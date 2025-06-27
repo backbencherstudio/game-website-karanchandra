@@ -216,6 +216,7 @@ model Payment {
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
   deleted_at      DateTime?
+  order_delivery  String    @default("Pending")
 
   items           PaymentItem[]
 
