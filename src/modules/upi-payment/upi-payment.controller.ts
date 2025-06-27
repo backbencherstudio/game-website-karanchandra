@@ -39,7 +39,7 @@ export class UpiPaymentController {
       if (isNaN(amount) || amount <= 0) {
         throw new BadRequestException('amount must be a positive number');
       }
-      
+
       
       // Create the payment data object
       const paymentData = {
@@ -48,6 +48,7 @@ export class UpiPaymentController {
         phone: body.phone,
         address: body.address,
         amount: amount,
+        items: body.items,
         description: body.description || 'Payment via form submission',
         notes: body.notes || 'Payment initiated from form endpoint'
       };
@@ -108,20 +109,9 @@ export class UpiPaymentController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   async getAllPayments(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('status') status?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
   ) {
     try {
-      const payments = await this.upiPaymentService.getAllPayments({
-        page,
-        limit,
-        status,
-        startDate,
-        endDate,
-      });
+      const payments = await this.upiPaymentService.getAllPayments();
 
       return {
         success: true,

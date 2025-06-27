@@ -28,35 +28,57 @@ export class UpiPaymentService {
     }
   }
 
+
+
+  
+
+
   // Method to create a one-time payment
   async create(createUpiPaymentDto: any) {
-    try {
       const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       const payload = qs.stringify({
         customer_name: createUpiPaymentDto.name,
         customer_mobile: createUpiPaymentDto.phone,
-        user_token: this.ezUpiApiKey, // From env
+        user_token: process.env.EZ_UPI_API_KEY, // or from config
         amount: String(createUpiPaymentDto.amount),
         order_id: transactionId,
-        redirect_url: this.successRedirectUrl,
-        redirect_url2: this.failureRedirectUrl,
+        redirect_url: 'https://yourdomain.com/success',
+        redirect_url2: 'https://yourdomain.com/failure',
         remark1: createUpiPaymentDto.description || 'Payment from form',
         remark2: createUpiPaymentDto.notes || 'UPI Notes',
       });
-      
-      const response = await axios.post(`${this.ezUpiApiUrl}`, payload, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+    
+      const response = await axios.post('https://ezupi.com/api/create-order', payload, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
-      if (!response.data || response.data.status === false) {
+    
+      if (!response.data || response.data.status !== true) {
         throw new BadRequestException(response.data?.message || 'EZ-UPI Error');
       }
+  
 
       const { orderId, payment_url } = response.data.result;
       
 
-      // Save to DB
+      // Fetch all products for the given productIds
+      const productIds = createUpiPaymentDto.items.map(item => item.productId);
+      const products = await this.prisma.product.findMany({
+        where: { id: { in: productIds } }
+      });
+      const productMap = new Map(products.map(p => [p.id, p]));
+
+      // Build items with price
+      const paymentItemsData = createUpiPaymentDto.items.map(item => {
+        const product = productMap.get(item.productId);
+        if (!product) throw new BadRequestException('Invalid productId: ' + item.productId);
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          price: product.discountPrice ?? product.regularPrice, // Use discount if available
+        };
+      });
+
+      // Create payment with items
       const payment = await this.prisma.payment.create({
         data: {
           order_id: orderId || transactionId,
@@ -69,27 +91,21 @@ export class UpiPaymentService {
           customer_address: createUpiPaymentDto.address,
           description: createUpiPaymentDto.description,
           notes: createUpiPaymentDto.notes,
+          items: {
+            create: paymentItemsData,
+          },
         },
         include: {
           items: true,
         },
       });
 
-      return {
-        success: true,
-        data: {
-          payment_url: payment_url,
-          transaction_id: orderId,
-          payment_id: payment.id,
-        },
-        message: 'UPI payment initiated successfully',
-      };
-    } catch (error) {
-      console.error('EZ-UPI Error:', error);
-      throw new BadRequestException(
-        error?.response?.data?.message || error.message || 'UPI Payment failed',
-      );
-    }
+      
+    return {
+      success: true,
+      data: response.data.result,
+      message: 'UPI payment initiated successfully',
+    };
   }
 
   // Method to verify the payment status
@@ -199,59 +215,18 @@ export class UpiPaymentService {
     }
   }
 
-  async getAllPayments({
-    page = 1,
-    limit = 10,
-    status,
-    startDate,
-    endDate,
-  }: {
-    page: number;
-    limit: number;
-    status?: string;
-    startDate?: string;
-    endDate?: string;
-  }) {
+  async getAllPayments() {
     try {
-      const skip = (page - 1) * limit;
-      const where: any = {};
-
-      if (status) {
-        where.status = status;
-      }
-
-      if (startDate || endDate) {
-        where.created_at = {};
-        if (startDate) where.created_at.gte = new Date(startDate);
-        if (endDate) where.created_at.lte = new Date(endDate);
-      }
-
-      const [total, payments] = await Promise.all([
-        this.prisma.payment.count({ where }),
-        this.prisma.payment.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: { created_at: 'desc' },
-          include: {
-            items: {
-              include: {
-                product: true,
-              },
+      const data = await this.prisma.payment.findMany({
+        include: {
+          items: {
+            include: {
+              product: true,
             },
           },
-        })
-      ]);
-
-      return {
-        payments,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit)
-        }
-      };
+        },
+      });
+      return data;
     } catch (error) {
       throw new BadRequestException(error.message || 'Failed to fetch payments');
     }
