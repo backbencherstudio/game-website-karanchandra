@@ -69,12 +69,6 @@ export class UpiPaymentService {
           customer_address: createUpiPaymentDto.address,
           description: createUpiPaymentDto.description,
           notes: createUpiPaymentDto.notes,
-          items: {
-            create: createUpiPaymentDto.items.map(item => ({
-              product: { connect: { id: item.productId } },
-              quantity: item.quantity,
-            })),
-          },
         },
         include: {
           items: true,

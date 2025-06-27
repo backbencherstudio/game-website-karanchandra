@@ -39,41 +39,7 @@ export class UpiPaymentController {
       if (isNaN(amount) || amount <= 0) {
         throw new BadRequestException('amount must be a positive number');
       }
-      console.log(body)
-      // Manually parse items as an array of objects
-      const items = [];
-      for (let i = 0; body[`items[${i}].productId`]; i++) {
-        // Find the key that matches, ignoring whitespace
-        const quantityKey = Object.keys(body).find(
-          k => k.replace(/\s/g, '') === `items[${i}].quantity`
-        );
-        const quantityRaw = quantityKey ? body[quantityKey] : undefined;
-        console.log(`Index ${i}:`, quantityRaw);
-
-        const quantity = quantityRaw !== undefined && quantityRaw !== '' ? parseInt(quantityRaw, 10) : null;
-        if (quantity === null || isNaN(quantity) || quantity <= 0) {
-          throw new BadRequestException('Each item must have a valid quantity');
-        }
-        items.push({
-          productId: body[`items[${i}].productId`],
-          quantity,
-        });
-      }
-
-      if (items.length === 0) {
-        throw new BadRequestException('items must be a non-empty array');
-      }
-
-      // Validate each item
-      for (const item of items) {
-        if (!item.productId || typeof item.productId !== 'string') {
-          throw new BadRequestException('Each item must have a valid productId');
-        }
-        if (typeof item.quantity !== 'number' || item.quantity <= 0) {
-          throw new BadRequestException('Each item must have a valid quantity');
-        }
-      }
-
+      
       
       // Create the payment data object
       const paymentData = {
@@ -82,11 +48,20 @@ export class UpiPaymentController {
         phone: body.phone,
         address: body.address,
         amount: amount,
-        items: items,
         description: body.description || 'Payment via form submission',
         notes: body.notes || 'Payment initiated from form endpoint'
       };
+      console.log("paymentData",paymentData)
       return await this.upiPaymentService.create(paymentData);
+      // return {
+      //   "success": true,
+      //   "data": {
+      //     "payment_url": "https://ezupi.com/payment3/instant-pay/ac2d007d468467cc4c89817a2224d0626a6cdd6eacb7e99e868cf5532c0e5753",
+      //     "transaction_id": "TXN_1750575930606_pr7rv71",
+      //     "payment_id": "cmc7bpmrt0000tzz4numbekjr"
+      //   },
+      //   "message": "UPI payment initiated successfully"
+      // }
     } catch (error) {
       console.error('Payment creation error:', error);
       throw new HttpException(
