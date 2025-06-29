@@ -56,7 +56,7 @@ export class DashboardService {
       const mappedProducts = products.map(product => ({
         ...product,
         imageUrl: product.image 
-          ? `${appConfig().app.url}/storage/product/${product.image}`
+          ? `${process.env.BACKEND_APP_URL}/storage/product/${product.image}`
           : null
       }));
 
@@ -84,7 +84,7 @@ export class DashboardService {
       return {
         ...product,
         imageUrl: product.image 
-          ? `${appConfig().app.url}/storage/product/${product.image}`
+          ? `${process.env.BACKEND_APP_URL}/storage/product/${product.image}`
           : null
       };
     } catch (error) {
