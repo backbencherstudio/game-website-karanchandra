@@ -24,6 +24,7 @@ import { ConceptsModule } from './modules/home/concepts/concepts.module';
 import { TrafficRulesModule } from './modules/home/traffic-rules/traffic-rules.module';
 import { EnviromentModule } from './modules/home/enviroment/enviroment.module';
 import { UpiPaymentModule } from './modules/upi-payment/upi-payment.module';
+import { MobalegendsPaymentModule } from './modules/mobalegends-payment/mobalegends-payment.module';
 import { SubscribeModule } from './modules/subscribe/subscribe.module';
 
 @Module({
@@ -75,6 +76,7 @@ import { SubscribeModule } from './modules/subscribe/subscribe.module';
     TrafficRulesModule,
     EnviromentModule,
     UpiPaymentModule,
+    MobalegendsPaymentModule,
     SubscribeModule,
   ],
   controllers: [AppController],

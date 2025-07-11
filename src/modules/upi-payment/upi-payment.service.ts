@@ -37,19 +37,23 @@ export class UpiPaymentService {
   async create(createUpiPaymentDto: any) {
       const transactionId = `TXN_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       const payload = qs.stringify({
-        customer_name: createUpiPaymentDto.name,
-        customer_mobile: createUpiPaymentDto.phone,
-        user_token: process.env.EZ_UPI_API_KEY, // or from config
+        customerName: createUpiPaymentDto.name,
+        customerMobile: createUpiPaymentDto.phone,
+        customerEmail: createUpiPaymentDto.email,
+        merchantName: createUpiPaymentDto.name,
+        apiKey: process.env.EZ_UPI_API_KEY, // or from config
         amount: String(createUpiPaymentDto.amount),
-        order_id: transactionId,
-        redirect_url: 'https://yourdomain.com/success',
-        redirect_url2: 'https://yourdomain.com/failure',
+        client_txn_id: transactionId,
+        redirectUrl: 'https://yourdomain.com/success',
+        // redirect_url2: 'https://yourdomain.com/failure',
         remark1: createUpiPaymentDto.description || 'Payment from form',
         remark2: createUpiPaymentDto.notes || 'UPI Notes',
       });
     
       const response = await axios.post('https://ezupi.com/api/create-order', payload, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
     
       if (!response.data || response.data.status !== true) {
