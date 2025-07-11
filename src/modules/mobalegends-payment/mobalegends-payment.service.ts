@@ -19,7 +19,7 @@ export class MobalegendsPaymentService {
     this.baseUrl =
       this.configService.get<string>('MOBILEGENDS_API_URL')      // if set in .env
       || 'https://gateway.mobalegends.in/api';                   // default
-    this.defaultRedirectUrl = this.configService.get<string>('MOBILEGENDS_REDIRECT_URL') || 'http://localhost:3000/payment/callback';
+    this.defaultRedirectUrl = this.configService.get<string>('SUCCESS_REDIRECT_URL') || 'http://localhost:3000/payment/success';
 
     if (!this.apiKey) {
       throw new Error('MOBILEGENDS_API_KEY is not configured');
@@ -49,7 +49,7 @@ export class MobalegendsPaymentService {
       customerName: dto.customerName,
       customerEmail: dto.customerEmail,
       customerMobile: dto.customerMobile,
-      redirectUrl: dto.redirectUrl || this.defaultRedirectUrl,
+      redirectUrl: process.env.SUCCESS_REDIRECT_URL || 'http://localhost:3000/payment/success',  // Direct env usage
       pInfo: dto.pInfo || 'Order Payment',
       udf1: dto.udf1,
       udf2: dto.udf2,
