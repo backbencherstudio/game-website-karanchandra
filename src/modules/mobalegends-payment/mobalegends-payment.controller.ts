@@ -17,8 +17,8 @@ export class MobalegendsPaymentController {
     try {
       return await this.mobalegendsPaymentService.create(body);
     } catch (error) {
-      console.error('Error creating payment:', error);
-      console.error('Error response:', error?.response?.data || error?.message);
+      // console.error('Error creating payment:', error);
+      // console.error('Error response:', error?.response?.data || error?.message);
       throw new BadRequestException(
         error?.response?.data?.message || 'Mobalegends Error',
       );
@@ -29,7 +29,7 @@ export class MobalegendsPaymentController {
   @Get('status/:transactionId')
   async getPaymentStatus(@Param('transactionId') transactionId: string) {
     try {
-      console.log("transactionId",transactionId)
+      // console.log("transactionId",transactionId)
       return await this.mobalegendsPaymentService.getPaymentStatus(transactionId);
     } catch (error) {
       throw new HttpException(

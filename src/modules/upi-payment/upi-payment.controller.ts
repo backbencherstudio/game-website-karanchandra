@@ -53,7 +53,7 @@ export class UpiPaymentController {
         description: body.description || 'Payment via form submission',
         notes: body.notes || 'Payment initiated from form endpoint'
       };
-      console.log("paymentData",paymentData)
+      // console.log("paymentData",paymentData)
       return await this.upiPaymentService.create(paymentData);
       // return {
       //   "success": true,
@@ -65,7 +65,7 @@ export class UpiPaymentController {
       //   "message": "UPI payment initiated successfully"
       // }
     } catch (error) {
-      console.error('Payment creation error:', error);
+      // console.error('Payment creation error:', error);
       throw new HttpException(
         error?.message || 'Failed to create UPI payment',
         error?.status || HttpStatus.BAD_REQUEST,

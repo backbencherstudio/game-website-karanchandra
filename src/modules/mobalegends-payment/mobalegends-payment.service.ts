@@ -124,7 +124,7 @@ export class MobalegendsPaymentService {
         message: 'Mobalegends payment initiated successfully',
       };
     } catch (err) {
-      console.error('Mobalegends error body:', err.response?.data);
+      // console.error('Mobalegends error body:', err.response?.data);
       throw new BadRequestException(
         err.response?.data?.message || err.message || 'Mobalegends error',
       );

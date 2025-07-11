@@ -145,7 +145,7 @@ export class UpiPaymentService {
         throw new BadRequestException('Payment verification failed');
       }
     } catch (error) {
-      console.error('Payment verification error:', error);
+      // console.error('Payment verification error:', error);
       throw new BadRequestException(
         error.response?.data?.message || error.message || 'Failed to verify payment'
       );
@@ -158,7 +158,7 @@ export class UpiPaymentService {
         where: { order_id: transactionId },
       });
 
-      console.log('EZ-UPI Status Response:', payment);
+      // console.log('EZ-UPI Status Response:', payment);
       if (!payment) {
         throw new BadRequestException('Payment not found');
       }
@@ -177,7 +177,7 @@ export class UpiPaymentService {
         }
       );
 
-      console.log('EZ-UPI Status Response:', response.data);
+      // console.log('EZ-UPI Status Response:', response.data);
 
       const { status, result, message } = response.data;
 
@@ -210,7 +210,7 @@ export class UpiPaymentService {
         message: txnStatus === 'SUCCESS' ? 'Payment completed' : 'Payment pending',
       };
     } catch (error) {
-      console.error('Check Payment Status Error:', error);
+      // console.error('Check Payment Status Error:', error);
       throw new BadRequestException(
         error?.response?.data?.message ||
           error?.message ||
