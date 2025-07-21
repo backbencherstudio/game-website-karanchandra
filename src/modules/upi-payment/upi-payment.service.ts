@@ -230,6 +230,7 @@ export class UpiPaymentService {
           },
         },
       });
+      console.log(data);
       return data;
     } catch (error) {
       throw new BadRequestException(error.message || 'Failed to fetch payments');

@@ -26,7 +26,7 @@ export class MobalegendsPaymentService {
     }
   }
 
-  async create(dto: CreateMobalegendsPaymentDto) {
+  async create(dto) {
     const transactionId =
       dto.client_txn_id ||
       `TXN_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -96,18 +96,18 @@ export class MobalegendsPaymentService {
           };
         });
       }
-
+      // console.log(paymentItemsData);
       await this.prisma.payment.create({
         data: {
           order_id: orderId,
           amount: numericAmount,
           currency: 'INR',
           status: PaymentStatus.PENDING,
-          customer_name: dto.customerName || 'Unknown',
-          customer_email: dto.customerEmail || 'unknown@example.com',
-          customer_phone: dto.customerMobile || '0000000000',
+          customer_name: dto.name || 'Unknown',
+          customer_email: dto.email || 'unknown@example.com',
+          customer_phone: dto.phone || '0000000000',
           customer_address: dto.address || 'N/A',
-          description: dto.pInfo || 'N/A',
+          description: dto.notes || 'N/A',
           notes: dto.udf1 || 'N/A',
           items: {
             create: paymentItemsData,
